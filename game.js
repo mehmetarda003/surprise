@@ -4,7 +4,8 @@ let player;
 let platforms = [];
 let enemies = [];
 let coins = [];
-let gameState = 'menu'; // menu, playing, gameOver
+let heart = null; // Bitiş noktası kalbi
+let gameState = 'menu'; // menu, playing, gameOver, gameWon
 let score = 0;
 let lives = 3;
 let selectedCharacter = 'esrio';
@@ -32,9 +33,9 @@ function playCoinSound() {
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     
-    oscillator.type = 'sine'; // Klasik ping sesi için dalga tipi
-    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 notası
-    oscillator.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.1); // A6 notasına kayış
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
+    oscillator.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.1); 
     
     gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
@@ -149,7 +150,7 @@ function setupControls() {
     jumpBtn.addEventListener('mousedown', handleJump);
     
     document.getElementById('startButton').addEventListener('click', () => {
-        initAudio(); // Ses motorunu başlat
+        initAudio();
         startGame();
     });
     
@@ -174,8 +175,14 @@ function startGame() {
     gameState = 'playing';
     score = 0;
     lives = 5;
-    showScreen('gameScreen');
     
+    // Oyun sonu ekranını eski (orijinal) haline sıfırla
+    const gameOverTitle = document.querySelector('#gameOverScreen h1');
+    gameOverTitle.textContent = "Oyun Bitti!";
+    gameOverTitle.style.color = "#333";
+    gameOverTitle.style.fontSize = "2em";
+    
+    showScreen('gameScreen');
     loadCharacterImages();
     platforms = [];
     createPlatforms();
@@ -183,7 +190,7 @@ function startGame() {
     const startPlatform = platforms.length > 0 ? platforms[0] : { x: 0, y: canvas.height - 40, width: 300, height: 40 };
     
     player = {
-        x: 50, // Sabit ve güvenli bir başlangıç noktası
+        x: 50, 
         y: startPlatform.y - 40,
         width: 40,
         height: 40,
@@ -193,6 +200,15 @@ function startGame() {
         onGround: false,
         character: selectedCharacter,
         customImage: customCharacterImage
+    };
+    
+    // Sürpriz Kalbi haritanın en sonuna yerleştiriyoruz
+    heart = {
+        x: 2800,
+        y: canvas.height - 90, // Zeminin hemen üstü
+        width: 50,
+        height: 50,
+        pulse: 0
     };
     
     enemies = [];
@@ -208,33 +224,30 @@ function startGame() {
 }
 
 function createPlatforms() {
-    // Çok daha mantıklı ve akıcı platform tasarımı
-    platforms.push({ x: 0, y: canvas.height - 40, width: 3000, height: 40 }); // Ana Zemin (Biraz inceltildi)
-    
-    platforms.push({ x: 400, y: canvas.height - 140, width: 200, height: 30 }); // 1. Basamak
-    platforms.push({ x: 700, y: canvas.height - 240, width: 200, height: 30 }); // 2. Basamak
-    platforms.push({ x: 1050, y: canvas.height - 180, width: 250, height: 30 }); // Aşağı iniş
-    platforms.push({ x: 1450, y: canvas.height - 280, width: 200, height: 30 }); // Yüksek basamak
-    platforms.push({ x: 1800, y: canvas.height - 150, width: 300, height: 30 }); // Güvenli alan
-    platforms.push({ x: 2300, y: canvas.height - 250, width: 200, height: 30 }); // Son zorluk
+    platforms.push({ x: 0, y: canvas.height - 40, width: 3000, height: 40 }); 
+    platforms.push({ x: 400, y: canvas.height - 140, width: 200, height: 30 }); 
+    platforms.push({ x: 700, y: canvas.height - 240, width: 200, height: 30 }); 
+    platforms.push({ x: 1050, y: canvas.height - 180, width: 250, height: 30 }); 
+    platforms.push({ x: 1450, y: canvas.height - 280, width: 200, height: 30 }); 
+    platforms.push({ x: 1800, y: canvas.height - 150, width: 300, height: 30 }); 
+    platforms.push({ x: 2300, y: canvas.height - 250, width: 200, height: 30 }); 
 }
 
 function createEnemies() {
-    // Düşmanlar tam olarak platformların veya zeminin üzerine yerleştirildi
-    enemies.push({ x: 550, y: canvas.height - 70, width: 30, height: 30, speed: 1.5, direction: 1 }); // Zeminde
-    enemies.push({ x: 750, y: canvas.height - 270, width: 30, height: 30, speed: 1.2, direction: -1 }); // 2. Basamakta
-    enemies.push({ x: 1100, y: canvas.height - 210, width: 30, height: 30, speed: 1.8, direction: 1 }); // 3. Platformda
-    enemies.push({ x: 1550, y: canvas.height - 70, width: 30, height: 30, speed: 1.5, direction: -1 }); // Zeminde tünel
-    enemies.push({ x: 1950, y: canvas.height - 180, width: 30, height: 30, speed: 2.0, direction: 1 }); // 5. Platformda (Hızlı)
-    enemies.push({ x: 2500, y: canvas.height - 70, width: 30, height: 30, speed: 1.5, direction: -1 }); // Sona doğru
+    enemies.push({ x: 550, y: canvas.height - 70, width: 30, height: 30, speed: 1.5, direction: 1 }); 
+    enemies.push({ x: 750, y: canvas.height - 270, width: 30, height: 30, speed: 1.2, direction: -1 }); 
+    enemies.push({ x: 1100, y: canvas.height - 210, width: 30, height: 30, speed: 1.8, direction: 1 }); 
+    enemies.push({ x: 1550, y: canvas.height - 70, width: 30, height: 30, speed: 1.5, direction: -1 }); 
+    enemies.push({ x: 1950, y: canvas.height - 180, width: 30, height: 30, speed: 2.0, direction: 1 }); 
+    enemies.push({ x: 2500, y: canvas.height - 70, width: 30, height: 30, speed: 1.5, direction: -1 }); 
 }
 
 function createCoins() {
-    // Altınları daha belirgin ve platformların üstüne yerleştir
-    for (let i = 0; i < 35; i++) {
+    // 1000 puana ulaşılabilmesi için bol bol altın yerleştirdim (Her altın 50 puan, Düşmanlar 100 puan)
+    for (let i = 0; i < 40; i++) {
         let coinY = canvas.height - 100 - (Math.random() * 200);
         coins.push({
-            x: 250 + (i * 75),
+            x: 200 + (i * 65),
             y: coinY,
             width: 20,
             height: 20,
@@ -362,7 +375,7 @@ function update() {
                 player.velocityY = -10;
             } else {
                 lives--;
-                player.x = 50; // Ölünce sabit güvenli noktaya dön
+                player.x = 50; 
                 player.y = platforms[0].y - 40;
                 player.velocityY = 0;
                 if (lives <= 0) gameOver();
@@ -370,15 +383,22 @@ function update() {
         }
     });
     
-    // Altın toplama ve Ses Efekti
+    // Altın toplama
     coins.forEach(coin => {
         if (!coin.collected && checkCollision(player, coin)) {
             coin.collected = true;
             score += 50;
-            playCoinSound(); // Altını alınca pıng sesini çal
+            playCoinSound();
         }
         coin.rotation += 0.1;
     });
+
+    // --- SÜRPRİZ KALP KONTROLÜ ---
+    if (checkCollision(player, heart)) {
+        if (score >= 1000) {
+            winGame(); // Kazanma ekranını tetikle
+        }
+    }
     
     camera.x = player.x - canvas.width / 2;
     camera.x = Math.max(0, Math.min(camera.x, 3000 - canvas.width));
@@ -433,6 +453,9 @@ function draw() {
             ctx.restore();
         }
     });
+
+    // --- SÜRPRİZ KALBİ ÇİZ ---
+    drawHeart();
     
     enemies.forEach(enemy => {
         ctx.fillStyle = '#FF0000';
@@ -446,6 +469,38 @@ function draw() {
     });
     
     drawPlayer();
+}
+
+function drawHeart() {
+    ctx.save();
+    // Kalp atış animasyonu
+    heart.pulse += 0.1;
+    let scale = 1 + Math.sin(heart.pulse) * 0.15;
+    
+    ctx.translate(heart.x - camera.x + heart.width/2, heart.y - camera.y + heart.height/2);
+    ctx.scale(scale, scale);
+    
+    // Ekrana büyük bir kalp emojis çiziyoruz
+    ctx.font = "50px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("❤️", 0, 0);
+    
+    ctx.restore();
+
+    // 1000 puandan azsa kalbin üzerinde uyarı belirsin
+    if (score < 1000) {
+        ctx.save();
+        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+        ctx.font = "bold 16px Arial";
+        ctx.textAlign = "center";
+        // Uyarı yazısı karakter kameraya yaklaşınca görünsün
+        if (Math.abs(player.x - heart.x) < 400) {
+            ctx.fillText("Sevgiline ulaşmak için", heart.x - camera.x + heart.width/2, heart.y - camera.y - 40);
+            ctx.fillText("1000 Puan toplamalısın!", heart.x - camera.x + heart.width/2, heart.y - camera.y - 20);
+        }
+        ctx.restore();
+    }
 }
 
 function drawCloud(x, y) {
@@ -477,6 +532,20 @@ function drawPlayer() {
 
 function gameOver() {
     gameState = 'gameOver';
+    document.getElementById('finalScore').textContent = score;
+    showScreen('gameOverScreen');
+}
+
+// SÜRPRİZ KAZANMA EKRANI FONKSİYONU
+function winGame() {
+    gameState = 'gameWon';
+    
+    // HTML'deki Oyun Bitti yazısını dinamik olarak sevgiline özel mesaja çeviriyoruz
+    const gameOverTitle = document.querySelector('#gameOverScreen h1');
+    gameOverTitle.innerHTML = "Başardın Sevgilim! <br> Seni Çok Seviyorum Herşeyim ❤️";
+    gameOverTitle.style.color = "#e60000"; // Romantik bir kırmızı renk
+    gameOverTitle.style.fontSize = "28px";
+    
     document.getElementById('finalScore').textContent = score;
     showScreen('gameOverScreen');
 }
