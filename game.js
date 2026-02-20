@@ -14,6 +14,38 @@ let customCharacterImage = null;
 let keys = {};
 let camera = { x: 0, y: 0 };
 
+// Ses Sistemi (Web Audio API)
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new AudioContext();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+function playCoinSound() {
+    if (!audioCtx) return;
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    oscillator.type = 'sine'; // Klasik ping sesi için dalga tipi
+    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 notası
+    oscillator.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.1); // A6 notasına kayış
+    
+    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.1);
+}
+
 // Canvas ve oyun başlatma
 function initGame() {
     canvas = document.getElementById('gameCanvas');
@@ -116,7 +148,11 @@ function setupControls() {
     jumpBtn.addEventListener('touchstart', handleJump);
     jumpBtn.addEventListener('mousedown', handleJump);
     
-    document.getElementById('startButton').addEventListener('click', startGame);
+    document.getElementById('startButton').addEventListener('click', () => {
+        initAudio(); // Ses motorunu başlat
+        startGame();
+    });
+    
     document.getElementById('restartButton').addEventListener('click', startGame);
     document.getElementById('menuButton').addEventListener('click', () => {
         showScreen('menuScreen');
@@ -144,10 +180,10 @@ function startGame() {
     platforms = [];
     createPlatforms();
     
-    const startPlatform = platforms.length > 0 ? platforms[0] : { x: 0, y: canvas.height - 50, width: 300, height: 50 };
+    const startPlatform = platforms.length > 0 ? platforms[0] : { x: 0, y: canvas.height - 40, width: 300, height: 40 };
     
     player = {
-        x: startPlatform.x + 50,
+        x: 50, // Sabit ve güvenli bir başlangıç noktası
         y: startPlatform.y - 40,
         width: 40,
         height: 40,
@@ -172,30 +208,34 @@ function startGame() {
 }
 
 function createPlatforms() {
-    platforms.push({ x: 0, y: canvas.height - 60, width: 400, height: 60 });
-    platforms.push({ x: 450, y: canvas.height - 180, width: 250, height: 30 });
-    platforms.push({ x: 750, y: canvas.height - 280, width: 200, height: 30 });
-    platforms.push({ x: 1000, y: canvas.height - 200, width: 250, height: 30 });
-    platforms.push({ x: 1300, y: canvas.height - 120, width: 300, height: 30 });
-    platforms.push({ x: 1650, y: canvas.height - 320, width: 200, height: 30 });
-    platforms.push({ x: 1900, y: canvas.height - 180, width: 250, height: 30 });
-    platforms.push({ x: 2200, y: canvas.height - 100, width: 300, height: 30 });
-    platforms.push({ x: 0, y: canvas.height - 20, width: 3000, height: 20 });
+    // Çok daha mantıklı ve akıcı platform tasarımı
+    platforms.push({ x: 0, y: canvas.height - 40, width: 3000, height: 40 }); // Ana Zemin (Biraz inceltildi)
+    
+    platforms.push({ x: 400, y: canvas.height - 140, width: 200, height: 30 }); // 1. Basamak
+    platforms.push({ x: 700, y: canvas.height - 240, width: 200, height: 30 }); // 2. Basamak
+    platforms.push({ x: 1050, y: canvas.height - 180, width: 250, height: 30 }); // Aşağı iniş
+    platforms.push({ x: 1450, y: canvas.height - 280, width: 200, height: 30 }); // Yüksek basamak
+    platforms.push({ x: 1800, y: canvas.height - 150, width: 300, height: 30 }); // Güvenli alan
+    platforms.push({ x: 2300, y: canvas.height - 250, width: 200, height: 30 }); // Son zorluk
 }
 
 function createEnemies() {
-    enemies.push({ x: 500, y: canvas.height - 300, width: 30, height: 30, speed: 1.5, direction: 1 });
-    enemies.push({ x: 900, y: canvas.height - 350, width: 30, height: 30, speed: 1.5, direction: -1 });
-    enemies.push({ x: 1350, y: canvas.height - 200, width: 30, height: 30, speed: 1.5, direction: 1 });
-    enemies.push({ x: 1750, y: canvas.height - 400, width: 30, height: 30, speed: 1.5, direction: -1 });
-    enemies.push({ x: 2100, y: canvas.height - 150, width: 30, height: 30, speed: 1.5, direction: 1 });
+    // Düşmanlar tam olarak platformların veya zeminin üzerine yerleştirildi
+    enemies.push({ x: 550, y: canvas.height - 70, width: 30, height: 30, speed: 1.5, direction: 1 }); // Zeminde
+    enemies.push({ x: 750, y: canvas.height - 270, width: 30, height: 30, speed: 1.2, direction: -1 }); // 2. Basamakta
+    enemies.push({ x: 1100, y: canvas.height - 210, width: 30, height: 30, speed: 1.8, direction: 1 }); // 3. Platformda
+    enemies.push({ x: 1550, y: canvas.height - 70, width: 30, height: 30, speed: 1.5, direction: -1 }); // Zeminde tünel
+    enemies.push({ x: 1950, y: canvas.height - 180, width: 30, height: 30, speed: 2.0, direction: 1 }); // 5. Platformda (Hızlı)
+    enemies.push({ x: 2500, y: canvas.height - 70, width: 30, height: 30, speed: 1.5, direction: -1 }); // Sona doğru
 }
 
 function createCoins() {
-    for (let i = 0; i < 30; i++) {
+    // Altınları daha belirgin ve platformların üstüne yerleştir
+    for (let i = 0; i < 35; i++) {
+        let coinY = canvas.height - 100 - (Math.random() * 200);
         coins.push({
-            x: 300 + i * 80 + Math.random() * 40,
-            y: canvas.height - 150 - Math.random() * 350,
+            x: 250 + (i * 75),
+            y: coinY,
             width: 20,
             height: 20,
             collected: false,
@@ -225,7 +265,6 @@ function gameLoop() {
 }
 
 function update() {
-    // 1. Girdileri Al
     let moveLeft = keys['ArrowLeft'] || keys['a'] || keys['A'];
     let moveRight = keys['ArrowRight'] || keys['d'] || keys['D'];
     
@@ -233,17 +272,16 @@ function update() {
     if (moveLeft && !moveRight) player.velocityX = -player.speed;
     if (moveRight && !moveLeft) player.velocityX = player.speed;
     
-    // Yerçekimi
     if (!player.onGround) {
         player.velocityY += 0.6; 
     }
     player.velocityY = Math.min(player.velocityY, 15);
     
-    // 2. X Ekseninde Hareket (Tıraşlanmış Hitbox)
+    // X Ekseninde Hareket
     player.x += player.velocityX;
     let hitboxX = {
         x: player.x,
-        y: player.y + 2, // Zemine takılmamak için üstten/alttan 2 piksel kırp
+        y: player.y + 2,
         width: player.width,
         height: player.height - 4
     };
@@ -259,11 +297,11 @@ function update() {
         }
     });
 
-    // 3. Y Ekseninde Hareket (Tıraşlanmış Hitbox)
+    // Y Ekseninde Hareket
     player.y += player.velocityY;
     player.onGround = false;
     let hitboxY = {
-        x: player.x + 2, // Köşelere takılmamak için sağdan/soldan 2 piksel kırp
+        x: player.x + 2,
         y: player.y,
         width: player.width - 4,
         height: player.height
@@ -282,9 +320,8 @@ function update() {
         }
     });
     
-    // 4. Düşman Güncelleme
+    // Düşman Güncelleme
     enemies.forEach(enemy => {
-        // Düşmanlara yerçekimi ekledik (havada asılı kalıp bozulmamaları için)
         enemy.velocityY = (enemy.velocityY || 0) + 0.6;
         enemy.y += enemy.velocityY;
         
@@ -303,7 +340,6 @@ function update() {
             enemy.x += enemy.speed * enemy.direction;
         }
 
-        // Düşmanın uçuruma gelince dönmesi
         let isOverEdge = true;
         platforms.forEach(platform => {
             let nextX = enemy.direction === 1 ? enemy.x + enemy.width : enemy.x;
@@ -315,10 +351,9 @@ function update() {
         
         if (isOverEdge || enemy.x < 0 || enemy.x > 3000) {
             enemy.direction *= -1;
-            enemy.x += enemy.speed * enemy.direction; // Takılmasını önle
+            enemy.x += enemy.speed * enemy.direction; 
         }
         
-        // Oyuncu - Düşman Çarpışması
         if (checkCollision(player, enemy)) {
             if (player.velocityY > 0 && player.y + player.height < enemy.y + enemy.height / 2) {
                 const index = enemies.indexOf(enemy);
@@ -327,36 +362,31 @@ function update() {
                 player.velocityY = -10;
             } else {
                 lives--;
-                if (platforms.length > 0) {
-                    player.x = platforms[0].x + 50;
-                    player.y = platforms[0].y - 40;
-                }
+                player.x = 50; // Ölünce sabit güvenli noktaya dön
+                player.y = platforms[0].y - 40;
                 player.velocityY = 0;
                 if (lives <= 0) gameOver();
             }
         }
     });
     
-    // Altın toplama
+    // Altın toplama ve Ses Efekti
     coins.forEach(coin => {
         if (!coin.collected && checkCollision(player, coin)) {
             coin.collected = true;
             score += 50;
+            playCoinSound(); // Altını alınca pıng sesini çal
         }
         coin.rotation += 0.1;
     });
     
-    // Kamera
     camera.x = player.x - canvas.width / 2;
     camera.x = Math.max(0, Math.min(camera.x, 3000 - canvas.width));
     
-    // Ekrandan düşme (Gerçek düşüş)
     if (player.y > canvas.height + 100) {
         lives--;
-        if (platforms.length > 0) {
-            player.x = platforms[0].x + 50;
-            player.y = platforms[0].y - 40;
-        }
+        player.x = 50;
+        player.y = platforms[0].y - 40;
         player.velocityY = 0;
         if (lives <= 0) gameOver();
     }
