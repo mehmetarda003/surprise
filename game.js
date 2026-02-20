@@ -21,10 +21,8 @@ function initGame() {
     
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-    
     setupCharacterSelection();
     setupControls();
-    
     gameLoop();
 }
 
@@ -74,11 +72,9 @@ function setupControls() {
     document.addEventListener('keydown', (e) => {
         keys[e.key] = true;
         keys[e.key.toLowerCase()] = true;
-        
-        // Zıplama mantığı (Sadece yerdeyse zıpla)
         if (e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w' || e.key === 'W') {
             if (player && player.onGround) {
-                player.velocityY = -13; // Zıplama gücünü biraz yumuşattım
+                player.velocityY = -13;
                 player.onGround = false;
             }
         }
@@ -89,7 +85,6 @@ function setupControls() {
         keys[e.key.toLowerCase()] = false;
     });
     
-    // Mobil kontroller
     const leftBtn = document.getElementById('leftBtn');
     const rightBtn = document.getElementById('rightBtn');
     const jumpBtn = document.getElementById('jumpBtn');
@@ -158,7 +153,7 @@ function startGame() {
         height: 40,
         velocityX: 0,
         velocityY: 0,
-        speed: 5, // Daha kontrollü bir hız
+        speed: 5,
         onGround: false,
         character: selectedCharacter,
         customImage: customCharacterImage
@@ -189,11 +184,11 @@ function createPlatforms() {
 }
 
 function createEnemies() {
-    enemies.push({ x: 500, y: canvas.height - 220, width: 30, height: 30, speed: 1.5, direction: 1 });
-    enemies.push({ x: 900, y: canvas.height - 320, width: 30, height: 30, speed: 1.5, direction: -1 });
-    enemies.push({ x: 1350, y: canvas.height - 150, width: 30, height: 30, speed: 1.5, direction: 1 });
-    enemies.push({ x: 1750, y: canvas.height - 350, width: 30, height: 30, speed: 1.5, direction: -1 });
-    enemies.push({ x: 2100, y: canvas.height - 130, width: 30, height: 30, speed: 1.5, direction: 1 });
+    enemies.push({ x: 500, y: canvas.height - 300, width: 30, height: 30, speed: 1.5, direction: 1 });
+    enemies.push({ x: 900, y: canvas.height - 350, width: 30, height: 30, speed: 1.5, direction: -1 });
+    enemies.push({ x: 1350, y: canvas.height - 200, width: 30, height: 30, speed: 1.5, direction: 1 });
+    enemies.push({ x: 1750, y: canvas.height - 400, width: 30, height: 30, speed: 1.5, direction: -1 });
+    enemies.push({ x: 2100, y: canvas.height - 150, width: 30, height: 30, speed: 1.5, direction: 1 });
 }
 
 function createCoins() {
@@ -230,7 +225,7 @@ function gameLoop() {
 }
 
 function update() {
-    // 1. Kullanıcı Girdisini Al ve İstenen Hızı Belirle
+    // 1. Girdileri Al
     let moveLeft = keys['ArrowLeft'] || keys['a'] || keys['A'];
     let moveRight = keys['ArrowRight'] || keys['d'] || keys['D'];
     
@@ -238,66 +233,99 @@ function update() {
     if (moveLeft && !moveRight) player.velocityX = -player.speed;
     if (moveRight && !moveLeft) player.velocityX = player.speed;
     
-    // Yerçekimi Uygula
+    // Yerçekimi
     if (!player.onGround) {
-        player.velocityY += 0.6; // Yerçekimi kuvveti
+        player.velocityY += 0.6; 
     }
-    player.velocityY = Math.min(player.velocityY, 15); // Maksimum düşme hızı (Terminal Velocity)
+    player.velocityY = Math.min(player.velocityY, 15);
     
-    // 2. X Ekseninde Hareket ve Çarpışma Kontrolü (Duvarlar için)
+    // 2. X Ekseninde Hareket (Tıraşlanmış Hitbox)
     player.x += player.velocityX;
+    let hitboxX = {
+        x: player.x,
+        y: player.y + 2, // Zemine takılmamak için üstten/alttan 2 piksel kırp
+        width: player.width,
+        height: player.height - 4
+    };
+
     platforms.forEach(platform => {
-        if (checkCollision(player, platform)) {
-            if (player.velocityX > 0) { // Sağa giderken çarptı
+        if (checkCollision(hitboxX, platform)) {
+            if (player.velocityX > 0) { 
                 player.x = platform.x - player.width;
-            } else if (player.velocityX < 0) { // Sola giderken çarptı
+            } else if (player.velocityX < 0) { 
                 player.x = platform.x + platform.width;
             }
+            player.velocityX = 0;
         }
     });
 
-    // 3. Y Ekseninde Hareket ve Çarpışma Kontrolü (Zemin/Tavan için)
+    // 3. Y Ekseninde Hareket (Tıraşlanmış Hitbox)
     player.y += player.velocityY;
     player.onGround = false;
+    let hitboxY = {
+        x: player.x + 2, // Köşelere takılmamak için sağdan/soldan 2 piksel kırp
+        y: player.y,
+        width: player.width - 4,
+        height: player.height
+    };
+
     platforms.forEach(platform => {
-        if (checkCollision(player, platform)) {
-            if (player.velocityY > 0) { // Aşağı düşerken çarptı (Zemine bastı)
+        if (checkCollision(hitboxY, platform)) {
+            if (player.velocityY > 0) { 
                 player.y = platform.y - player.height;
                 player.velocityY = 0;
                 player.onGround = true;
-            } else if (player.velocityY < 0) { // Yukarı çıkarken çarptı (Kafasını tavana vurdu)
+            } else if (player.velocityY < 0) { 
                 player.y = platform.y + platform.height;
                 player.velocityY = 0;
             }
         }
     });
     
-    // Düşman güncelleme
+    // 4. Düşman Güncelleme
     enemies.forEach(enemy => {
-        enemy.x += enemy.speed * enemy.direction;
+        // Düşmanlara yerçekimi ekledik (havada asılı kalıp bozulmamaları için)
+        enemy.velocityY = (enemy.velocityY || 0) + 0.6;
+        enemy.y += enemy.velocityY;
         
-        let onPlatform = false;
+        let enemyOnGround = false;
         platforms.forEach(platform => {
-            if (enemy.x + enemy.width >= platform.x && 
-                enemy.x <= platform.x + platform.width &&
-                Math.abs((enemy.y + enemy.height) - platform.y) < 5) {
-                onPlatform = true;
+            if (checkCollision(enemy, platform)) {
+                if (enemy.velocityY > 0) {
+                    enemy.y = platform.y - enemy.height;
+                    enemy.velocityY = 0;
+                    enemyOnGround = true;
+                }
+            }
+        });
+
+        if (enemyOnGround) {
+            enemy.x += enemy.speed * enemy.direction;
+        }
+
+        // Düşmanın uçuruma gelince dönmesi
+        let isOverEdge = true;
+        platforms.forEach(platform => {
+            let nextX = enemy.direction === 1 ? enemy.x + enemy.width : enemy.x;
+            if (nextX >= platform.x && nextX <= platform.x + platform.width &&
+                Math.abs((enemy.y + enemy.height) - platform.y) <= 2) {
+                isOverEdge = false;
             }
         });
         
-        if (!onPlatform || enemy.x < 0 || enemy.x > 3000) {
+        if (isOverEdge || enemy.x < 0 || enemy.x > 3000) {
             enemy.direction *= -1;
+            enemy.x += enemy.speed * enemy.direction; // Takılmasını önle
         }
         
+        // Oyuncu - Düşman Çarpışması
         if (checkCollision(player, enemy)) {
             if (player.velocityY > 0 && player.y + player.height < enemy.y + enemy.height / 2) {
-                // Düşmanı ezme durumu
                 const index = enemies.indexOf(enemy);
                 enemies.splice(index, 1);
                 score += 100;
-                player.velocityY = -8; // Düşmanı ezince hafif seker
+                player.velocityY = -10;
             } else {
-                // Hasar alma durumu
                 lives--;
                 if (platforms.length > 0) {
                     player.x = platforms[0].x + 50;
@@ -318,11 +346,11 @@ function update() {
         coin.rotation += 0.1;
     });
     
-    // Kamera takibi
+    // Kamera
     camera.x = player.x - canvas.width / 2;
     camera.x = Math.max(0, Math.min(camera.x, 3000 - canvas.width));
     
-    // Ekrandan Düşme
+    // Ekrandan düşme (Gerçek düşüş)
     if (player.y > canvas.height + 100) {
         lives--;
         if (platforms.length > 0) {
