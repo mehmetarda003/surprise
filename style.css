@@ -1,0 +1,265 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    touch-action: manipulation;
+}
+
+body {
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#gameContainer {
+    width: 100%;
+    height: 100%;
+    max-width: 800px;
+    max-height: 600px;
+    position: relative;
+    background: #1a1a2e;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+.screen {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    color: white;
+    text-align: center;
+}
+
+.screen.hidden {
+    display: none;
+}
+
+h1 {
+    font-size: 2.5em;
+    margin-bottom: 30px;
+    text-shadow: 3px 3px 0px #000;
+    color: #ffd700;
+}
+
+h2 {
+    font-size: 1.8em;
+    margin-bottom: 20px;
+    color: #ffd700;
+}
+
+h3 {
+    font-size: 1.3em;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+#characterSelect {
+    margin: 20px 0;
+}
+
+#characterOptions {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 20px 0;
+}
+
+.character-option {
+    cursor: pointer;
+    padding: 15px;
+    border: 3px solid transparent;
+    border-radius: 10px;
+    transition: all 0.3s;
+    background: rgba(255,255,255,0.1);
+}
+
+.character-option:hover,
+.character-option.selected {
+    border-color: #ffd700;
+    background: rgba(255,215,0,0.2);
+    transform: scale(1.1);
+}
+
+.character-option img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    display: block;
+    margin-bottom: 10px;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+.custom-upload label {
+    display: block;
+    width: 80px;
+    height: 80px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 2em;
+    margin-bottom: 10px;
+}
+
+.custom-upload label:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 15px 30px;
+    font-size: 1.2em;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin: 10px;
+    transition: all 0.3s;
+    text-transform: uppercase;
+}
+
+.btn-primary {
+    background: #4CAF50;
+    color: white;
+    box-shadow: 0 4px 0 #2e7d32;
+}
+
+.btn-primary:hover {
+    background: #45a049;
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #2e7d32;
+}
+
+.btn-primary:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #2e7d32;
+}
+
+.btn-secondary {
+    background: #ff9800;
+    color: white;
+    box-shadow: 0 4px 0 #e68900;
+}
+
+.btn-secondary:hover {
+    background: #fb8c00;
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #e68900;
+}
+
+#instructions {
+    margin-top: 30px;
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+#gameScreen {
+    position: relative;
+    padding: 0;
+}
+
+#gameCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: #87CEEB;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+#gameUI {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.2em;
+    font-weight: bold;
+    text-shadow: 2px 2px 0px #000;
+    pointer-events: none;
+}
+
+#mobileControls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 15px;
+    z-index: 10;
+}
+
+.control-btn {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5em;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.9);
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    transition: all 0.1s;
+}
+
+.control-btn:active {
+    transform: scale(0.9);
+    background: rgba(200,200,200,0.9);
+}
+
+@media (min-width: 768px) {
+    #mobileControls {
+        display: none;
+    }
+}
+
+@media (max-width: 767px) {
+    h1 {
+        font-size: 1.8em;
+    }
+    
+    h2 {
+        font-size: 1.4em;
+    }
+    
+    .character-option img,
+    .custom-upload label {
+        width: 60px;
+        height: 60px;
+    }
+    
+    #gameContainer {
+        border-radius: 0;
+        max-width: 100%;
+        max-height: 100%;
+    }
+}
+
+#gameOverScreen {
+    background: rgba(0,0,0,0.9);
+}
+
+#finalScore {
+    font-size: 2em;
+    color: #ffd700;
+    font-weight: bold;
+}
