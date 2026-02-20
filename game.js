@@ -7,7 +7,9 @@ let coins = [];
 let gameState = 'menu'; // menu, playing, gameOver
 let score = 0;
 let lives = 3;
-let selectedCharacter = 'mario';
+let selectedCharacter = 'esrio';
+let esrioImage = null;
+let meugiImage = null;
 let customCharacterImage = null;
 let keys = {};
 let camera = { x: 0, y: 0 };
@@ -66,19 +68,23 @@ function setupCharacterSelection() {
         }
     });
     
-    // İlk karakteri seç
-    options[0].classList.add('selected');
+    // İlk karakteri seç (esrio)
+    if (options.length > 0) {
+        options[0].classList.add('selected');
+        selectedCharacter = 'esrio';
+    }
 }
 
 // Kontroller
 function setupControls() {
     // Klavye kontrolleri
     document.addEventListener('keydown', (e) => {
+        e.preventDefault();
         keys[e.key] = true;
-        if (e.key === 'ArrowUp' || e.key === ' ') {
-            e.preventDefault();
+        keys[e.key.toLowerCase()] = true;
+        if (e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w' || e.key === 'W') {
             if (player && player.onGround) {
-                player.velocityY = -15;
+                player.velocityY = -16;
                 player.onGround = false;
             }
         }
@@ -86,6 +92,7 @@ function setupControls() {
     
     document.addEventListener('keyup', (e) => {
         keys[e.key] = false;
+        keys[e.key.toLowerCase()] = false;
     });
     
     // Mobil kontroller
@@ -93,31 +100,51 @@ function setupControls() {
     const rightBtn = document.getElementById('rightBtn');
     const jumpBtn = document.getElementById('jumpBtn');
     
-    leftBtn.addEventListener('touchstart', (e) => {
+    // Mouse/touch event'leri için
+    const handleLeftStart = (e) => {
         e.preventDefault();
         keys['ArrowLeft'] = true;
-    });
-    leftBtn.addEventListener('touchend', (e) => {
+        keys['a'] = true;
+    };
+    const handleLeftEnd = (e) => {
         e.preventDefault();
         keys['ArrowLeft'] = false;
-    });
+        keys['a'] = false;
+    };
     
-    rightBtn.addEventListener('touchstart', (e) => {
+    const handleRightStart = (e) => {
         e.preventDefault();
         keys['ArrowRight'] = true;
-    });
-    rightBtn.addEventListener('touchend', (e) => {
+        keys['d'] = true;
+    };
+    const handleRightEnd = (e) => {
         e.preventDefault();
         keys['ArrowRight'] = false;
-    });
+        keys['d'] = false;
+    };
     
-    jumpBtn.addEventListener('touchstart', (e) => {
+    const handleJump = (e) => {
         e.preventDefault();
         if (player && player.onGround) {
-            player.velocityY = -15;
+            player.velocityY = -16;
             player.onGround = false;
         }
-    });
+    };
+    
+    leftBtn.addEventListener('touchstart', handleLeftStart);
+    leftBtn.addEventListener('touchend', handleLeftEnd);
+    leftBtn.addEventListener('mousedown', handleLeftStart);
+    leftBtn.addEventListener('mouseup', handleLeftEnd);
+    leftBtn.addEventListener('mouseleave', handleLeftEnd);
+    
+    rightBtn.addEventListener('touchstart', handleRightStart);
+    rightBtn.addEventListener('touchend', handleRightEnd);
+    rightBtn.addEventListener('mousedown', handleRightStart);
+    rightBtn.addEventListener('mouseup', handleRightEnd);
+    rightBtn.addEventListener('mouseleave', handleRightEnd);
+    
+    jumpBtn.addEventListener('touchstart', handleJump);
+    jumpBtn.addEventListener('mousedown', handleJump);
     
     // Butonlar
     document.getElementById('startButton').addEventListener('click', startGame);
@@ -128,22 +155,42 @@ function setupControls() {
     });
 }
 
+// Karakter resimlerini yükle
+function loadCharacterImages() {
+    esrioImage = new Image();
+    esrioImage.src = 'characters/esrio.37';
+    esrioImage.onerror = function() {
+        // Dosya bulunamazsa alternatif yolları dene
+        esrioImage.src = 'esrio.37';
+    };
+    
+    meugiImage = new Image();
+    meugiImage.src = 'characters/meugi.11';
+    meugiImage.onerror = function() {
+        meugiImage.src = 'meugi.11';
+    };
+}
+
 // Oyunu başlat
 function startGame() {
     gameState = 'playing';
     score = 0;
-    lives = 3;
+    lives = 5;
     showScreen('gameScreen');
     
-    // Oyuncu oluştur
+    // Karakter resimlerini yükle
+    loadCharacterImages();
+    
+    // Oyuncu oluştur - direkt ilk platformun üzerinde başla
+    const startPlatform = platforms.length > 0 ? platforms[0] : { x: 0, y: canvas.height - 50, width: 300, height: 50 };
     player = {
-        x: 100,
-        y: 100,
+        x: startPlatform.x + 50,
+        y: startPlatform.y - 40,
         width: 40,
         height: 40,
         velocityX: 0,
         velocityY: 0,
-        speed: 5,
+        speed: 6,
         onGround: false,
         character: selectedCharacter,
         customImage: customCharacterImage
@@ -152,6 +199,13 @@ function startGame() {
     // Platformlar oluştur
     platforms = [];
     createPlatforms();
+    
+    // Oyuncuyu platform üzerine yerleştir
+    if (platforms.length > 0) {
+        const startPlatform = platforms[0];
+        player.x = startPlatform.x + 50;
+        player.y = startPlatform.y - 40;
+    }
     
     // Düşmanlar oluştur
     enemies = [];
@@ -169,31 +223,35 @@ function startGame() {
 }
 
 function createPlatforms() {
-    // Başlangıç platformları
-    platforms.push({ x: 0, y: canvas.height - 50, width: 300, height: 50 });
-    platforms.push({ x: 350, y: canvas.height - 150, width: 200, height: 30 });
-    platforms.push({ x: 600, y: canvas.height - 250, width: 200, height: 30 });
-    platforms.push({ x: 850, y: canvas.height - 200, width: 200, height: 30 });
-    platforms.push({ x: 1100, y: canvas.height - 100, width: 300, height: 30 });
-    platforms.push({ x: 1450, y: canvas.height - 300, width: 200, height: 30 });
-    platforms.push({ x: 1700, y: canvas.height - 150, width: 200, height: 30 });
+    // Başlangıç platformları - daha eğlenceli ve dengeli
+    platforms.push({ x: 0, y: canvas.height - 60, width: 400, height: 60 }); // Başlangıç platformu (daha geniş)
+    platforms.push({ x: 450, y: canvas.height - 180, width: 250, height: 30 });
+    platforms.push({ x: 750, y: canvas.height - 280, width: 200, height: 30 });
+    platforms.push({ x: 1000, y: canvas.height - 200, width: 250, height: 30 });
+    platforms.push({ x: 1300, y: canvas.height - 120, width: 300, height: 30 });
+    platforms.push({ x: 1650, y: canvas.height - 320, width: 200, height: 30 });
+    platforms.push({ x: 1900, y: canvas.height - 180, width: 250, height: 30 });
+    platforms.push({ x: 2200, y: canvas.height - 100, width: 300, height: 30 });
     
     // Zemin
-    platforms.push({ x: 0, y: canvas.height - 20, width: 2000, height: 20 });
+    platforms.push({ x: 0, y: canvas.height - 20, width: 3000, height: 20 });
 }
 
 function createEnemies() {
-    enemies.push({ x: 400, y: canvas.height - 200, width: 30, height: 30, speed: 2, direction: 1 });
-    enemies.push({ x: 800, y: canvas.height - 300, width: 30, height: 30, speed: 2, direction: -1 });
-    enemies.push({ x: 1200, y: canvas.height - 150, width: 30, height: 30, speed: 2, direction: 1 });
-    enemies.push({ x: 1600, y: canvas.height - 200, width: 30, height: 30, speed: 2, direction: -1 });
+    // Daha dengeli düşman yerleşimi
+    enemies.push({ x: 500, y: canvas.height - 220, width: 30, height: 30, speed: 1.5, direction: 1 });
+    enemies.push({ x: 900, y: canvas.height - 320, width: 30, height: 30, speed: 1.5, direction: -1 });
+    enemies.push({ x: 1350, y: canvas.height - 150, width: 30, height: 30, speed: 1.5, direction: 1 });
+    enemies.push({ x: 1750, y: canvas.height - 350, width: 30, height: 30, speed: 1.5, direction: -1 });
+    enemies.push({ x: 2100, y: canvas.height - 130, width: 30, height: 30, speed: 1.5, direction: 1 });
 }
 
 function createCoins() {
-    for (let i = 0; i < 20; i++) {
+    // Daha fazla altın, daha iyi yerleşim
+    for (let i = 0; i < 30; i++) {
         coins.push({
-            x: 200 + i * 100 + Math.random() * 50,
-            y: canvas.height - 200 - Math.random() * 300,
+            x: 300 + i * 80 + Math.random() * 40,
+            y: canvas.height - 150 - Math.random() * 350,
             width: 20,
             height: 20,
             collected: false,
@@ -224,19 +282,24 @@ function gameLoop() {
 }
 
 function update() {
-    // Oyuncu hareketi
+    // Oyuncu hareketi - daha responsive
+    let moveLeft = keys['ArrowLeft'] || keys['a'] || keys['A'];
+    let moveRight = keys['ArrowRight'] || keys['d'] || keys['D'];
+    
     player.velocityX = 0;
     
-    if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+    if (moveLeft) {
         player.velocityX = -player.speed;
     }
-    if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+    if (moveRight) {
         player.velocityX = player.speed;
     }
     
-    // Yerçekimi
-    player.velocityY += 0.8;
-    player.velocityY = Math.min(player.velocityY, 15);
+    // Yerçekimi - daha dengeli
+    if (!player.onGround) {
+        player.velocityY += 0.7;
+    }
+    player.velocityY = Math.min(player.velocityY, 12);
     
     // Oyuncu pozisyonunu güncelle
     player.x += player.velocityX;
@@ -280,7 +343,7 @@ function update() {
             }
         });
         
-        if (!onPlatform || enemy.x < 0 || enemy.x > 2000) {
+        if (!onPlatform || enemy.x < 0 || enemy.x > 3000) {
             enemy.direction *= -1;
         }
         
@@ -296,9 +359,17 @@ function update() {
             } else {
                 // Oyuncuya hasar
                 lives--;
-                player.x = 100;
-                player.y = 100;
+                // Başlangıç platformuna geri dön
+                if (platforms.length > 0) {
+                    const startPlatform = platforms[0];
+                    player.x = startPlatform.x + 50;
+                    player.y = startPlatform.y - 40;
+                } else {
+                    player.x = 100;
+                    player.y = 100;
+                }
                 player.velocityY = 0;
+                player.velocityX = 0;
                 if (lives <= 0) {
                     gameOver();
                 }
@@ -315,16 +386,24 @@ function update() {
         coin.rotation += 0.1;
     });
     
-    // Kamera takibi
+    // Kamera takibi - daha smooth
     camera.x = player.x - canvas.width / 2;
-    camera.x = Math.max(0, Math.min(camera.x, 2000 - canvas.width));
+    camera.x = Math.max(0, Math.min(camera.x, 3000 - canvas.width));
     
     // Ekran dışına düşme kontrolü
     if (player.y > canvas.height + 100) {
         lives--;
-        player.x = 100;
-        player.y = 100;
+        // Başlangıç platformuna geri dön
+        if (platforms.length > 0) {
+            const startPlatform = platforms[0];
+            player.x = startPlatform.x + 50;
+            player.y = startPlatform.y - 40;
+        } else {
+            player.x = 100;
+            player.y = 100;
+        }
         player.velocityY = 0;
+        player.velocityX = 0;
         if (lives <= 0) {
             gameOver();
         }
@@ -410,50 +489,37 @@ function drawPlayer() {
     
     // Eğer özel resim varsa onu kullan
     if (player.character === 'custom' && player.customImage) {
-        ctx.drawImage(player.customImage, px, py, player.width, player.height);
+        if (player.customImage.complete) {
+            ctx.drawImage(player.customImage, px, py, player.width, player.height);
+        }
+    } else if (player.character === 'esrio' && esrioImage) {
+        // Esrio karakteri (.37 dosyası)
+        if (esrioImage.complete && esrioImage.naturalWidth > 0) {
+            ctx.drawImage(esrioImage, px, py, player.width, player.height);
+        } else {
+            // Resim yüklenmediyse varsayılan çizim
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(px, py, player.width, player.height);
+            ctx.fillStyle = '#FFD93D';
+            ctx.fillRect(px + 5, py + 5, player.width - 10, player.height - 10);
+        }
+    } else if (player.character === 'meugi' && meugiImage) {
+        // Meugi karakteri (.11 dosyası)
+        if (meugiImage.complete && meugiImage.naturalWidth > 0) {
+            ctx.drawImage(meugiImage, px, py, player.width, player.height);
+        } else {
+            // Resim yüklenmediyse varsayılan çizim
+            ctx.fillStyle = '#4ECDC4';
+            ctx.fillRect(px, py, player.width, player.height);
+            ctx.fillStyle = '#FFD93D';
+            ctx.fillRect(px + 5, py + 5, player.width - 10, player.height - 10);
+        }
     } else {
         // Varsayılan karakter çizimi
-        if (player.character === 'mario') {
-            // Kırmızı şapka
-            ctx.fillStyle = '#FF0000';
-            ctx.fillRect(px + 5, py, player.width - 10, 15);
-            // Yüz
-            ctx.fillStyle = '#FFDBAC';
-            ctx.fillRect(px + 5, py + 15, player.width - 10, player.height - 15);
-            // Gözler
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(px + 10, py + 20, 5, 5);
-            ctx.fillRect(px + 25, py + 20, 5, 5);
-            // Bıyık
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(px + 8, py + 28, 24, 3);
-            // Kırmızı gövde
-            ctx.fillStyle = '#FF0000';
-            ctx.fillRect(px + 8, py + 30, player.width - 16, 10);
-        } else if (player.character === 'luigi') {
-            // Yeşil şapka
-            ctx.fillStyle = '#00FF00';
-            ctx.fillRect(px + 5, py, player.width - 10, 15);
-            // Yüz
-            ctx.fillStyle = '#FFDBAC';
-            ctx.fillRect(px + 5, py + 15, player.width - 10, player.height - 15);
-            // Gözler
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(px + 10, py + 20, 5, 5);
-            ctx.fillRect(px + 25, py + 20, 5, 5);
-            // Bıyık
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(px + 8, py + 28, 24, 3);
-            // Yeşil gövde
-            ctx.fillStyle = '#00FF00';
-            ctx.fillRect(px + 8, py + 30, player.width - 16, 10);
-        } else {
-            // Varsayılan mavi karakter
-            ctx.fillStyle = '#0000FF';
-            ctx.fillRect(px, py, player.width, player.height);
-            ctx.fillStyle = '#FFDBAC';
-            ctx.fillRect(px + 5, py + 5, player.width - 10, player.height - 15);
-        }
+        ctx.fillStyle = '#FF6B6B';
+        ctx.fillRect(px, py, player.width, player.height);
+        ctx.fillStyle = '#FFD93D';
+        ctx.fillRect(px + 5, py + 5, player.width - 10, player.height - 10);
     }
 }
 
